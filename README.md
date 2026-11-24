@@ -118,7 +118,54 @@ the file contents. Keep the file outside repositories and set the OS ACL to your
 | `brain_context` | Goal, next action, active items from lv24-brain |
 | `brain_publish` | Idempotent digest note for the saved diagram set |
 
-CLI: `mcp`, `doctor`, `render`, `scan`, `brain`, `init`, `version`.
+CLI: `mcp`, `serve`, `doctor`, `render`, `scan`, `brain`, `init`, `version`.
+
+## HTTP mode (diagram-api)
+
+`lv24-diagram serve` runs an opt-in HTTP service that renders Mermaid to PNG and serves the image
+by a public UUID URL (used by the city AI diagram desk). The stdio MCP command is unchanged.
+
+```bash
+export DIAGRAM_API_TOKEN="..."      # required, must not be empty
+lv24-diagram serve \
+  --http-port 3793 \
+  --host 127.0.0.1 \
+  --redis-url redis://127.0.0.1:6379 \
+  --token-env DIAGRAM_API_TOKEN
+```
+
+| Endpoint | Auth | Behaviour |
+|---|---|---|
+| `GET /health` | no | `{status, chromium, storage, queue}` |
+| `POST /v1/render` | `x-lv24-diagram-token` | Mermaid → PNG, stored for one hour |
+| `GET /v1/diagrams/{uuid}.png` | no | `image/png`, `Cache-Control: public, max-age=3600, immutable` |
+| `GET /docs-json` | no | OpenAPI 3 JSON |
+| `GET /docs` | no | Swagger UI |
+
+```bash
+curl -s -X POST http://127.0.0.1:3793/v1/render \
+  -H "x-lv24-diagram-token: $DIAGRAM_API_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"mermaid":"flowchart LR\n  A[User] --> B[API]","theme":"default","title":"Request flow"}'
+# {"id":"…","width":522,"height":84,"bytes":5725,"mermaid":"…"}
+```
+
+Request body: `mermaid` 10–4000 characters, `theme` `default|base|dark|forest|neutral`, optional
+`title` 1–80. Rendering is capped at **40 nodes** (lint hard budget) and uses Mermaid
+`securityLevel: strict`; `click` directives and `%%{init}%%` blocks are rejected with
+400 `DIAGRAM_INVALID` plus `findings[]`. Concurrency is **1**, the waiting queue is **4**, the
+render timeout is **10 s**, and the PNG long side is capped at **2400 px** (downscaled after render).
+A full queue returns 429 `DIAGRAM_BUSY`; a render failure, timeout or missing Chromium returns
+503 `DIAGRAM_UNAVAILABLE`.
+
+PNGs live in Redis under `diagram:v1:png:<uuid>` with TTL **3600 s**. There is deliberately no
+in-memory fallback: when Redis is unavailable, `POST /v1/render` and `GET …png` return
+503 `STORAGE_UNAVAILABLE`, and `/health` reports `storage: "down"`. The token comes from the
+environment variable named by `--token-env`; missing or empty stops the process before it listens.
+
+The default bind is `127.0.0.1`. In a container, bind the container interface and publish the port
+only on the internal Docker network — never on the host's public interface. Logs go to stderr and
+contain neither the token nor diagram text.
 
 ## draw.io
 
@@ -160,7 +207,7 @@ Keep the tab visible: Chrome moves background tabs to bfcache and drops the WebS
 ```bash
 npm install
 npm run build
-npm test               # node:test, 21 tests
+npm test               # node:test, 49 tests
 node dist/src/cli.js doctor
 ```
 

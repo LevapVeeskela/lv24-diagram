@@ -7,6 +7,7 @@ Rules for agents working in this repository.
 - Node 22.5+, ESM, strict TypeScript, no bundler: `tsc` emits `dist/`, tests run with `node:test`.
 - Layers: `src/mermaid` (parse/lint/render), `src/schema` (Postgres + ER), `src/arch` (scan/diagram),
   `src/drawio` (MCP client), `src/docs` (repository + manifest), `src/brain` (CLI adapter),
+  `src/http` (opt-in HTTP render service: server/routes/auth/storage/queue, PNG cap, OpenAPI),
   `src/mcp` (tool surface), `src/cli.ts` (entry point).
 - Dependencies are pinned exactly; no `^`/`~`. Do not add a framework for something `node:*` covers.
 
@@ -21,7 +22,19 @@ Rules for agents working in this repository.
   guard into a permission claim. New queries must be catalog-only or explicitly SELECT.
 - **No invented facts.** `arch_scan` reports unknowns instead of guessing; ER comes from the
   catalog; diagrams carry only what was observed.
-- **Never bind to 0.0.0.0.** draw.io is `127.0.0.1`; the package opens no listening socket of its own.
+- **Never bind to 0.0.0.0 on a workstation.** draw.io is `127.0.0.1`; `lv24-diagram serve` binds
+  `127.0.0.1` by default. In a container bind the container interface and publish the port only on
+  the internal Docker network, never on the host's public interface.
+- **HTTP mode is token-gated and fail-closed.** `serve` requires a non-empty token from the variable
+  named by `--token-env` (default `DIAGRAM_API_TOKEN`) and must exit before listening otherwise.
+  Only `POST /v1/render` is authenticated; `/health`, `/docs`, `/docs-json` and `/{id}.png` are
+  public by design.
+- **Render limits belong to the service, not the caller.** 10–4000 input characters, 40 nodes,
+  Mermaid `securityLevel: strict`, no `click` or `%%{init}%%`, concurrency 1, queue ≤ 4, 10 s
+  timeout, PNG long side ≤ 2400 px. Redis is the only storage (`diagram:v1:png:<uuid>`, TTL 3600);
+  never add an in-memory fallback.
+- **HTTP logs never contain the token or diagram text.** Log route names, error classes and queue
+  state only.
 
 ## Workflow
 

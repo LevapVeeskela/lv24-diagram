@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented here. Format: Keep a Changelog, SemVer.
 
+## [0.2.0] — 2026-11-25
+
+### Added
+
+- **HTTP mode (`lv24-diagram serve`)** for `diagram-api`: renders Mermaid to PNG and serves it by a
+  public UUID URL. Flags: `--http-port` (default **3793**), `--host` (default **127.0.0.1**),
+  `--redis-url`, `--token-env` (default `DIAGRAM_API_TOKEN`). A missing or empty token stops the
+  process before it listens.
+- `POST /v1/render` (token header `x-lv24-diagram-token`) returns `{id, width, height, bytes,
+  mermaid}`; `GET /v1/diagrams/{uuid}.png` is public with `Cache-Control: public, max-age=3600,
+  immutable`; `GET /health` reports Chromium, Redis and queue state; `GET /docs-json` and `GET /docs`
+  expose OpenAPI 3 and Swagger UI.
+- Render limits: 10–4000 input characters, 40 linted nodes, themes `default|base|dark|forest|neutral`,
+  Mermaid `securityLevel: strict` with `click` and `%%{init}%%` rejected, concurrency **1**, queue
+  **4**, timeout **10 s**, PNG long side **2400 px** (box-filter downscale). Queue overflow → 429
+  `DIAGRAM_BUSY`; render/timeout/Chromium failure → 503 `DIAGRAM_UNAVAILABLE`.
+- Redis-only PNG storage under `diagram:v1:png:<uuid>` with TTL **3600 s**. No in-memory fallback:
+  an unavailable Redis yields 503 `STORAGE_UNAVAILABLE` on render and fetch.
+- `swagger-ui-dist` and `redis` as pinned runtime dependencies; 21 new `node:test` cases (49 total)
+  for auth, validation and findings, queue/429, storage 200/404/503, health, OpenAPI and PNG
+  filters/downscale.
+
+### Changed
+
+- `renderMermaid` accepts `fullWidth` for HTTP renders; wide diagrams are rendered at intrinsic size
+  instead of 100% of the page and then capped at 2400 px. Mermaid is always initialized with
+  `securityLevel: "strict"` (the previous default, now explicit).
+
 ## [0.1.2] — 2026-11-24
 
 ### Added

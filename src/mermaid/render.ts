@@ -16,7 +16,26 @@ export interface RenderOptions {
   png?: boolean;
   theme?: MermaidTheme;
   backgroundColor?: string;
+  /**
+   * Render at the intrinsic SVG size instead of shrinking wide diagrams to the page width.
+   * The HTTP service uses this so a 40-node chart is downscaled once, deliberately, to 2400 px.
+   */
+  fullWidth?: boolean;
 }
+
+/** Mermaid defaults each diagram to width=100%, which clips wide charts to the page. */
+const INTRINSIC_WIDTH_CONFIG = {
+  flowchart: { useMaxWidth: false },
+  sequence: { useMaxWidth: false },
+  class: { useMaxWidth: false },
+  state: { useMaxWidth: false },
+  er: { useMaxWidth: false },
+  gantt: { useMaxWidth: false },
+  pie: { useMaxWidth: false },
+  journey: { useMaxWidth: false },
+  requirement: { useMaxWidth: false },
+  c4: { useMaxWidth: false },
+} as const;
 
 export interface RenderedDiagram {
   svg: string;
@@ -64,6 +83,8 @@ export async function renderMermaid(
     screenshot: wantPng,
     mermaidConfig: {
       theme: options.theme ?? "default",
+      securityLevel: "strict",
+      ...(options.fullWidth ? INTRINSIC_WIDTH_CONFIG : {}),
     },
     containerStyle: {
       backgroundColor: options.backgroundColor ?? "#ffffff",

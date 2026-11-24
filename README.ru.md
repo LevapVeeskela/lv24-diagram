@@ -74,7 +74,55 @@ cd <репозиторий> && lv24-diagram init     # создаст diagram.co
 | `brain_context` | Цель, следующий шаг и активные пункты проекта из brain |
 | `brain_publish` | Идемпотентная заметка-дайджест по сохранённому набору схем |
 
-CLI: `mcp`, `doctor`, `render`, `scan`, `brain`, `drawio`, `init`, `version`.
+CLI: `mcp`, `serve`, `doctor`, `render`, `scan`, `brain`, `drawio`, `init`, `version`.
+
+## HTTP-режим (diagram-api)
+
+`lv24-diagram serve` запускает опциональный HTTP-сервис: рендерит Mermaid в PNG и отдаёт картинку
+по публичному UUID-URL (используется столом диаграмм city AI). Команда `mcp` на stdio не меняется.
+
+```bash
+export DIAGRAM_API_TOKEN="..."      # обязателен, пустой не принимается
+lv24-diagram serve \
+  --http-port 3793 \
+  --host 127.0.0.1 \
+  --redis-url redis://127.0.0.1:6379 \
+  --token-env DIAGRAM_API_TOKEN
+```
+
+| Маршрут | Авторизация | Что делает |
+|---|---|---|
+| `GET /health` | нет | `{status, chromium, storage, queue}` |
+| `POST /v1/render` | `x-lv24-diagram-token` | Mermaid → PNG, хранение на час |
+| `GET /v1/diagrams/{uuid}.png` | нет | `image/png`, `Cache-Control: public, max-age=3600, immutable` |
+| `GET /docs-json` | нет | OpenAPI 3 JSON |
+| `GET /docs` | нет | Swagger UI |
+
+```bash
+curl -s -X POST http://127.0.0.1:3793/v1/render \
+  -H "x-lv24-diagram-token: $DIAGRAM_API_TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"mermaid":"flowchart LR\n  A[User] --> B[API]","theme":"default","title":"Request flow"}'
+# {"id":"…","width":522,"height":84,"bytes":5725,"mermaid":"…"}
+```
+
+Тело запроса: `mermaid` 10–4000 символов, `theme` `default|base|dark|forest|neutral`,
+опциональный `title` 1–80. Лимиты: **40 узлов** (жёсткий бюджет линтера), Mermaid
+`securityLevel: strict`; директивы `click` и блоки `%%{init}%%` отклоняются с 400
+`DIAGRAM_INVALID` и `findings[]`. Одновременно выполняется **1** рендер, очередь — **4**,
+таймаут — **10 с**, длинная сторона PNG — не более **2400 px** (уменьшается после рендера).
+Переполненная очередь — 429 `DIAGRAM_BUSY`; ошибка рендера, таймаут или отсутствие Chromium —
+503 `DIAGRAM_UNAVAILABLE`.
+
+PNG лежат в Redis по ключу `diagram:v1:png:<uuid>` с TTL **3600 с**. Память как fallback
+намеренно не используется: если Redis недоступен, `POST /v1/render` и `GET …png` отвечают
+503 `STORAGE_UNAVAILABLE`, а `/health` показывает `storage: "down"`. Токен берётся из переменной
+окружения, имя которой задаёт `--token-env`; пустое или отсутствующее значение останавливает
+процесс до открытия порта.
+
+По умолчанию сервис слушает `127.0.0.1`. В контейнере биндите интерфейс контейнера и публикуйте
+порт только во внутренней Docker-сети — никогда на публичном интерфейсе хоста. Логи идут в stderr
+и не содержат ни токена, ни текста диаграмм.
 
 ## draw.io
 
@@ -114,7 +162,7 @@ lv24-diagram drawio start     # 127.0.0.1:3214, редактор там же
 ```bash
 npm install
 npm run build
-npm test          # node:test, 21 тест
+npm test          # node:test, 49 тестов
 node dist/src/cli.js doctor
 ```
 

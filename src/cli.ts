@@ -13,6 +13,7 @@ import { saveDiagram } from "./docs/repository.js";
 import { BrainClient } from "./brain/client.js";
 import { errorMessage, log } from "./log.js";
 import { startStdioServer } from "./mcp/server.js";
+import { startHttpServer } from "./http/server.js";
 import { renderMermaid } from "./mermaid/render.js";
 import { lintMermaid } from "./mermaid/lint.js";
 import { PostgresIntrospector } from "./schema/postgres.js";
@@ -291,6 +292,35 @@ async function commandDrawio(args: CliArgs): Promise<number> {
   }
 }
 
+async function commandServe(args: CliArgs): Promise<number> {
+  const portText = flagString(args, "http-port") ?? "3793";
+  const port = Number(portText);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error(`--http-port must be an integer between 1 and 65535, got "${portText}"`);
+    return 2;
+  }
+  const host = flagString(args, "host") ?? "127.0.0.1";
+  const redisUrl = flagString(args, "redis-url") ?? "redis://127.0.0.1:6379";
+  const tokenEnv = flagString(args, "token-env") ?? "DIAGRAM_API_TOKEN";
+  const token = process.env[tokenEnv];
+  if (!token || token.trim().length === 0) {
+    console.error(`${tokenEnv} is empty or unset; refusing to start without an HTTP token`);
+    return 1;
+  }
+
+  const server = await startHttpServer({ host, port, token, redisUrl });
+  try {
+    await new Promise<void>((resolve) => {
+      const stop = (): void => resolve();
+      process.once("SIGINT", stop);
+      process.once("SIGTERM", stop);
+    });
+  } finally {
+    await server.close();
+  }
+  return 0;
+}
+
 async function commandInit(args: CliArgs): Promise<number> {
   const target = resolve(flagString(args, "path") ?? "diagram.config.json");
   if (existsSync(target) && !flagBoolean(args, "force")) {
@@ -308,6 +338,8 @@ function usage(): string {
     "",
     "usage:",
     "  lv24-diagram mcp                     start the MCP server on stdio (default)",
+    "  lv24-diagram serve [--http-port 3793] [--host 127.0.0.1] [--redis-url URL] [--token-env NAME]",
+    "                                       HTTP render service for diagram-api",
     "  lv24-diagram doctor [--strict]       check node, chromium, draw.io, database, brain",
     "  lv24-diagram render <file.mmd>       lint and render to SVG/PNG",
     "  lv24-diagram scan [path] [--view]    scan a repository and print an architecture diagram",
@@ -336,6 +368,8 @@ async function main(): Promise<number> {
       return commandBrain(args);
     case "drawio":
       return commandDrawio(args);
+    case "serve":
+      return commandServe(args);
     case "init":
       return commandInit(args);
     case "version":

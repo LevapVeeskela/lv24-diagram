@@ -1,6 +1,6 @@
 {
   "name": "lv24-diagram",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Architecture-as-code MCP: Mermaid render/lint, ER diagrams from a live schema, repository architecture scan, draw.io bridge",
   "license": "Apache-2.0",
   "type": "module",
@@ -44,6 +44,8 @@
     "mermaid-isomorphic": "3.1.0",
     "pg": "8.23.1",
     "playwright": "1.65.1",
+    "redis": "6.4.0",
+    "swagger-ui-dist": "5.36.0",
     "yaml": "2.9.1",
     "zod": "4.6.7"
   },
