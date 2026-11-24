@@ -26,6 +26,7 @@
         "database": { "type": "string" },
         "user": { "type": "string" },
         "password": { "type": "string", "description": "Use \"${ENV_VAR}\"; never a literal secret." },
+        "passwordFile": { "type": "string", "description": "Path to a file containing the password. Relative paths resolve against the config file's directory. Read and trimmed at load time; takes priority over password. Keep it outside repositories." },
         "ssl": { "type": "boolean", "default": false },
         "schemas": { "type": "array", "items": { "type": "string" }, "minItems": 1, "default": ["public"] },
         "includeViews": { "type": "boolean", "default": false, "description": "List views and materialized views as well." },

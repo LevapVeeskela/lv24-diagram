@@ -9,7 +9,10 @@ export interface DatabaseConfig {
   port: number;
   database: string;
   user: string;
+  /** Resolved password: an inline value, or the trimmed contents of passwordFile. */
   password: string;
+  /** Absolute path of the password file when one was configured. */
+  passwordFile?: string;
   ssl: boolean;
   schemas: string[];
   /** Include views and materialized views in catalog listings (default false). */
@@ -115,6 +118,14 @@ function asString(value: unknown, path: string, fallback: string): string {
   return value;
 }
 
+function asOptionalString(value: unknown, path: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ConfigError(`${path} must be a non-empty string`);
+  }
+  return value;
+}
+
 function asNumber(value: unknown, path: string, fallback: number): number {
   if (value === undefined) return fallback;
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -156,6 +167,7 @@ function parseDatabase(raw: unknown): DatabaseConfig | undefined {
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new ConfigError("database.port must be an integer between 1 and 65535");
   }
+  const passwordFile = asOptionalString(value.passwordFile, "database.passwordFile");
   return {
     kind,
     host: asString(value.host, "database.host", "127.0.0.1"),
@@ -163,6 +175,7 @@ function parseDatabase(raw: unknown): DatabaseConfig | undefined {
     database: asString(value.database, "database.database", ""),
     user: asString(value.user, "database.user", ""),
     password: asString(value.password, "database.password", ""),
+    ...(passwordFile ? { passwordFile } : {}),
     ssl: asBoolean(value.ssl, "database.ssl", false),
     schemas: asStringArray(value.schemas, "database.schemas", ["public"]),
     includeViews: asBoolean(value.includeViews, "database.includeViews", false),
@@ -255,7 +268,50 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Diagr
       `Cannot read ${path}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-  return mergeConfig(interpolateDeep(parsed, env), path);
+  const parsedConfig = mergeConfig(interpolateDeep(parsed, env), path);
+  return applyPasswordFile(parsedConfig, options.cwd ?? process.cwd());
+}
+
+/**
+ * Resolves a configured password file against the config directory, so a relative path works from
+ * any working directory. Falls back to cwd when the config was not loaded from a file.
+ */
+export function resolvePasswordFile(
+  configPath: string | undefined,
+  file: string,
+  cwd = process.cwd(),
+): string {
+  if (isAbsolute(file)) return resolve(file);
+  const base = configPath ? resolve(configPath, "..") : resolve(cwd);
+  return resolve(base, file);
+}
+
+/**
+ * Reads `database.passwordFile`, trims it and stores the value in `database.password`.
+ * The file always wins over an inline password. Errors name the path and never echo contents.
+ */
+export async function applyPasswordFile(
+  config: DiagramConfig,
+  cwd = process.cwd(),
+): Promise<DiagramConfig> {
+  const database = config.database;
+  if (!database?.passwordFile) return config;
+  const path = resolvePasswordFile(config.sourcePath, database.passwordFile, cwd);
+  let raw: string;
+  try {
+    raw = await readFile(path, "utf8");
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      throw new ConfigError(`database.passwordFile not found: ${path}`);
+    }
+    throw new ConfigError(`Cannot read database.passwordFile ${path} (${code ?? "read error"})`);
+  }
+  const password = raw.trim();
+  if (password === "") {
+    throw new ConfigError(`database.passwordFile is empty: ${path}`);
+  }
+  return { ...config, database: { ...database, password, passwordFile: path } };
 }
 
 /** Resolves the docs directory against the config location, so tools work from any cwd. */

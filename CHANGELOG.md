@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. Format: Keep a Changelog, SemVer.
 
+## [0.1.2] — 2026-11-24
+
+### Added
+
+- **`database.passwordFile`.** The password can now come from a file instead of an environment
+  variable, which is the only option when the MCP host is already running and cannot be given a new
+  `env` value. A relative path resolves against the config file's directory, the file is read and
+  trimmed at load time, and it takes priority over `password`. A missing or empty file fails with
+  the resolved path in the message and never echoes the contents. Keep the file outside
+  repositories with an ACL limited to your user.
+- Five config tests: parsing, relative-path resolution, file-over-inline priority, missing file and
+  empty file.
+
 ## [0.1.1] — 2026-11-24
 
 ### Fixed

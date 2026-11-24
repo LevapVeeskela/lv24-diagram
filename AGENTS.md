@@ -14,7 +14,8 @@ Rules for agents working in this repository.
 
 - **stdout belongs to MCP.** Every log line goes to stderr (`src/log.ts`). A stray `console.log`
   in a tool path corrupts the protocol.
-- **No secrets.** Config accepts `${ENV}` only; notes and errors pass through `redactSecrets`.
+- **No secrets.** Config accepts `${ENV}` or `passwordFile` (a file outside the repo, read and
+  trimmed at load, never echoed by errors); notes and errors pass through `redactSecrets`.
   Never print a DSN with credentials, never read `.env*` contents in `arch_scan`.
 - **Database stays read-only.** Keep the session read-only, keep the SQL guard, and never turn the
   guard into a permission claim. New queries must be catalog-only or explicitly SELECT.

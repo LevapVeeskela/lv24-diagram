@@ -7,13 +7,13 @@
     "url": "https://github.com/LevapVeeskela/lv24-diagram",
     "source": "github"
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "lv24-diagram",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "runtimeHint": "npx",
       "runtimeArguments": [
         {

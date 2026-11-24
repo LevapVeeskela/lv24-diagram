@@ -76,7 +76,7 @@ function fail(error: unknown) {
 function requireDatabase(runtime: Runtime): PostgresIntrospector {
   if (!runtime.introspector) {
     throw new Error(
-      "No database is configured. Add a `database` section to diagram.config.json (password: \"${ENV_VAR}\").",
+      "No database is configured. Add a `database` section to diagram.config.json (password: \"${ENV_VAR}\" or passwordFile: \"<path>\").",
     );
   }
   return runtime.introspector;

@@ -60,7 +60,8 @@ cd <repo> && lv24-diagram init      # writes diagram.config.json
     "port": 5432,
     "database": "app",
     "user": "readonly_user",
-    "password": "${APP_DB_PASSWORD}",   // never a literal secret
+    "password": "${APP_DB_PASSWORD}",   // env substitution
+    "passwordFile": "C:/Users/me/.config/lv24-diagram/db-password", // optional, wins over password
     "schemas": ["public"],
     "includeViews": false,
     "excludeTables": ["spatial_ref_sys"],
@@ -76,6 +77,12 @@ cd <repo> && lv24-diagram init      # writes diagram.config.json
 Discovery order: `--config`, `$DIAGRAM_CONFIG`, `./diagram.config.json`,
 `~/.config/lv24-diagram/config.json`. `${VAR}` is expanded at load time; a missing variable is a
 hard error.
+
+Secrets: `password` accepts `${ENV_VAR}`, but an already-running MCP host cannot be given a new
+environment variable. Use `passwordFile` instead — a path to a file readable only by you. A relative
+path resolves against the config file's directory; the file is read and trimmed at load time, and it
+wins over `password`. A missing or empty file is a hard error that names the path and never echoes
+the file contents. Keep the file outside repositories and set the OS ACL to your user only.
 
 ## OpenCode
 
@@ -144,7 +151,8 @@ Keep the tab visible: Chrome moves background tabs to bfcache and drops the WebS
 - Database access is read-only by construction: the session is set to read-only, the user should be
   `db_datareader`/`SELECT`-only, and the SQL guard is explicitly a **guardrail, not a permission
   boundary**.
-- No secrets in configs, notes or diagrams; `${ENV}` only.
+- No secrets in configs, notes or diagrams: `${ENV}` substitution or a `passwordFile` that lives
+  outside the repository with restrictive ACLs. Errors reveal paths, never contents.
 - `arch_scan` skips hidden directories and never reads `.env*` contents — only presence of files.
 
 ## Development
