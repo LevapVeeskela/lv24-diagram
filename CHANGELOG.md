@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. Format: Keep a Changelog, SemVer.
 
+## [0.2.1] — 2026-11-25
+
+### Added
+
+- **`mcpName` in `package.json`** (`io.github.LevapVeeskela/lv24-diagram`). The MCP Registry rejects a
+  package that does not declare which `server.json` name it belongs to, so `mcp-publisher publish`
+  failed with `NPM package 'lv24-diagram' is missing required 'mcpName' field`. No functional change:
+  tools, HTTP mode, render limits and config are identical to 0.2.0.
+
 ## [0.2.0] — 2026-11-25
 
 ### Added
