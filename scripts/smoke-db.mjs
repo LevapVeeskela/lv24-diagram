@@ -19,6 +19,8 @@ const introspector = new PostgresIntrospector({
   password: process.env.SMOKE_PG_PASSWORD ?? "",
   ssl: false,
   schemas: ["public"],
+  includeViews: false,
+  excludeTables: ["spatial_ref_sys"],
   statementTimeoutMs: 15000,
   maxRows: 50,
 });
@@ -30,6 +32,10 @@ try {
 
   console.log("tables:", tables.map((table) => `${table.name}(${table.estimatedRows})`).join(", "));
   console.log("columns:", snapshot.columns.length, "foreign keys:", snapshot.foreignKeys.length);
+  console.log(
+    "er budget:",
+    `included ${er.included.length}, skipped ${er.skipped.length}, skippedRelations ${er.skippedRelations}`,
+  );
   console.log("mermaid:\n" + er.mermaid);
 
   const rendered = await renderMermaid(er.mermaid, { png: true });
@@ -41,7 +47,13 @@ try {
     svg: rendered.svg,
     ...(rendered.png ? { png: rendered.png } : {}),
   });
-  console.log("rendered:", `${rendered.width}x${rendered.height}`, "png bytes:", rendered.png?.byteLength ?? 0);
+  console.log(
+    "rendered:",
+    `layout ${rendered.layoutWidth.toFixed(0)}x${rendered.layoutHeight.toFixed(0)}`,
+    `png ${rendered.pngWidth}x${rendered.pngHeight}`,
+    "png bytes:",
+    rendered.png?.byteLength ?? 0,
+  );
   console.log("saved:", saved.files.join(", "));
 
   const query = await introspector.query("select name from places order by name");

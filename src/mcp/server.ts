@@ -166,6 +166,10 @@ export function buildServer(runtime: Runtime): McpServer {
           {
             width: rendered.width,
             height: rendered.height,
+            layoutWidth: rendered.layoutWidth,
+            layoutHeight: rendered.layoutHeight,
+            pngWidth: rendered.pngWidth ?? null,
+            pngHeight: rendered.pngHeight ?? null,
             pngBytes: rendered.png?.byteLength ?? 0,
             svgBytes: Buffer.byteLength(rendered.svg, "utf8"),
             svg: rendered.svg.length <= 20_000 ? rendered.svg : undefined,
@@ -246,12 +250,16 @@ export function buildServer(runtime: Runtime): McpServer {
       description: "List tables and views with row estimates from the configured PostgreSQL database.",
       inputSchema: {
         pattern: z.string().optional().describe("SQL LIKE pattern, e.g. travel_%"),
+        include_views: z.boolean().optional().describe("Include views and materialized views"),
       },
     },
-    async ({ pattern }) => {
+    async ({ pattern, include_views }) => {
       try {
         const db = requireDatabase(runtime);
-        const tables = await db.tables(pattern);
+        const tables = await db.tables({
+          ...(pattern ? { pattern } : {}),
+          ...(include_views === undefined ? {} : { includeViews: include_views }),
+        });
         return ok({ count: tables.length, tables });
       } catch (error) {
         return fail(error);

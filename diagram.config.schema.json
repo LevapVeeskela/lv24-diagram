@@ -28,6 +28,8 @@
         "password": { "type": "string", "description": "Use \"${ENV_VAR}\"; never a literal secret." },
         "ssl": { "type": "boolean", "default": false },
         "schemas": { "type": "array", "items": { "type": "string" }, "minItems": 1, "default": ["public"] },
+        "includeViews": { "type": "boolean", "default": false, "description": "List views and materialized views as well." },
+        "excludeTables": { "type": "array", "items": { "type": "string" }, "default": ["spatial_ref_sys"], "description": "Relations hidden from listings and ER (PostGIS internals by default)." },
         "statementTimeoutMs": { "type": "integer", "minimum": 1, "default": 15000 },
         "maxRows": { "type": "integer", "minimum": 1, "default": 500 }
       }

@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented here. Format: Keep a Changelog, SemVer.
 
+## [0.1.1] — 2026-11-24
+
+### Fixed
+
+- **PNG dimensions were wrong.** `diagram_render`, saved diagrams and the CLI reported
+  mermaid-isomorphic layout units as if they were pixels (2838×2911 vs the real 1264×1297 screenshot).
+  `width`/`height` now return the true PNG pixel size parsed from the IHDR chunk (layout size when no
+  PNG is produced), and the layout units are exposed separately as `layoutWidth`/`layoutHeight`, with
+  `pngWidth`/`pngHeight` when a screenshot exists. No fields were removed.
+- **PostGIS metadata polluted listings and ER.** Views are no longer listed by default (`includeViews`,
+  `schema_tables.include_views`), and `spatial_ref_sys` is excluded via `database.excludeTables`.
+  On the city database this removes 2 metadata views and the spatial reference table.
+- **Dropped relations were silent.** `schema_er` now returns `skippedRelations` (count) and the first
+  50 entries in `droppedRelations` when the entity budget cuts an FK, instead of quietly losing edges.
+- **Nullable columns carried a misleading `"null"` comment** in the ER diagram; nullability belongs to
+  `schema_columns`, not to Mermaid keys.
+- README on the npm page was one commit behind (absolute paths in the OpenCode example); this release
+  publishes the generic example.
+
 ## [0.1.0] — 2026-11-24
 
 First public release. One MCP server replacing mermaid + dbhub + drawio for architecture work.

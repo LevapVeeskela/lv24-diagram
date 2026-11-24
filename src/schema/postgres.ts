@@ -97,8 +97,10 @@ export class PostgresIntrospector {
     return client;
   }
 
-  async tables(pattern?: string): Promise<TableInfo[]> {
+  async tables(options: { pattern?: string; includeViews?: boolean } = {}): Promise<TableInfo[]> {
     const client = await this.#connect();
+    const includeViews = options.includeViews ?? this.config.includeViews;
+    const kinds = includeViews ? ["r", "p", "v", "m"] : ["r", "p", "m"];
     const { rows } = await client.query<{
       schema: string;
       name: string;
@@ -112,11 +114,12 @@ export class PostgresIntrospector {
               greatest(c.reltuples, 0)::bigint as estimated_rows
          from pg_class c
          join pg_namespace n on n.oid = c.relnamespace
-        where c.relkind in ('r','p','v','m')
+        where c.relkind = any($3::"char"[])
           and n.nspname = any($1::text[])
+          and not (c.relname = any($4::text[]))
           and ($2::text is null or c.relname like $2)
         order by n.nspname, c.relname`,
-      [this.config.schemas, pattern ?? null],
+      [this.config.schemas, options.pattern ?? null, kinds, this.config.excludeTables],
     );
     return rows.map((row) => ({
       schema: row.schema,

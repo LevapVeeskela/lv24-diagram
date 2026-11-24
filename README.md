@@ -62,6 +62,8 @@ cd <repo> && lv24-diagram init      # writes diagram.config.json
     "user": "readonly_user",
     "password": "${APP_DB_PASSWORD}",   // never a literal secret
     "schemas": ["public"],
+    "includeViews": false,
+    "excludeTables": ["spatial_ref_sys"],
     "statementTimeoutMs": 15000,
     "maxRows": 500
   },

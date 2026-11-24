@@ -9,6 +9,7 @@ import { findCycle, graphDepth, lintMermaid } from "../src/mermaid/lint.js";
 import { buildErDiagram, mermaidType } from "../src/schema/er.js";
 import type { SchemaSnapshot } from "../src/schema/postgres.js";
 import { assertReadOnlyQuery } from "../src/schema/postgres.js";
+import { pngSize } from "../src/mermaid/render.js";
 import { VERSION } from "../src/version.js";
 
 test("version matches package.json", () => {
@@ -121,6 +122,24 @@ test("er diagram respects entity budget", () => {
   assert.deepEqual(er.included, ["places"]);
   assert.deepEqual(er.skipped, ["events"]);
   assert.doesNotMatch(er.mermaid, /events \{/);
+  assert.equal(er.skippedRelations, 1, "dropped relation is reported, not silent");
+  assert.deepEqual(er.droppedRelations, [{ from: "events", to: "places", column: "place_id" }]);
+});
+
+test("er columns carry keys but no nullable comments", () => {
+  const er = buildErDiagram(snapshot, { maxEntities: 10 });
+  assert.doesNotMatch(er.mermaid, /"null"/);
+  assert.match(er.mermaid, /uuid id PK/);
+});
+
+test("pngSize reads real pixels from IHDR", () => {
+  const buffer = Buffer.alloc(24);
+  Buffer.from("89504e470d0a1a0a", "hex").copy(buffer, 0);
+  buffer.writeUInt32BE(1264, 16);
+  buffer.writeUInt32BE(1297, 20);
+  assert.deepEqual(pngSize(buffer), { width: 1264, height: 1297 });
+  assert.equal(pngSize(Buffer.alloc(10)), undefined);
+  assert.equal(pngSize(Buffer.alloc(24)), undefined);
 });
 
 test("er type mapping is mermaid-safe", () => {

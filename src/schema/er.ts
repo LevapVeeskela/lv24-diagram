@@ -8,11 +8,21 @@ export interface ErOptions {
   maxColumnsPerEntity?: number;
 }
 
+export interface DroppedRelation {
+  from: string;
+  to: string;
+  column: string;
+}
+
 export interface ErResult {
   mermaid: string;
   included: string[];
   skipped: string[];
   truncatedColumns: string[];
+  /** Relations dropped because one side fell outside the entity budget. */
+  skippedRelations: number;
+  /** First 50 dropped relations, so the caller can widen the filter. */
+  droppedRelations: DroppedRelation[];
 }
 
 const TYPE_MAP: Record<string, string> = {
@@ -71,6 +81,15 @@ export function buildErDiagram(snapshot: SchemaSnapshot, options: ErOptions = {}
   const includedTables = ranked.slice(0, maxEntities);
   const includedNames = new Set(includedTables.map((table) => table.name));
   const skipped = ranked.slice(maxEntities).map((table) => table.name);
+  const knownTables = new Set(snapshot.tables.map((table) => table.name));
+  const skippedRelationsList = snapshot.foreignKeys
+    .filter(
+      (fk) =>
+        knownTables.has(fk.table) &&
+        knownTables.has(fk.refTable) &&
+        (!includedNames.has(fk.table) || !includedNames.has(fk.refTable)),
+    )
+    .map((fk) => ({ from: fk.table, to: fk.refTable, column: fk.column }));
 
   const fkByTable = new Map<string, Set<string>>();
   for (const fk of snapshot.foreignKeys) {
@@ -99,8 +118,7 @@ export function buildErDiagram(snapshot: SchemaSnapshot, options: ErOptions = {}
         if (fkByTable.get(`${column.schema}.${column.table}`)?.has(column.name)) keys.push("FK");
         if (column.isUnique && !column.isPrimaryKey) keys.push("UK");
         const suffix = keys.length > 0 ? ` ${joinKeys(keys)}` : "";
-        const comment = column.isNullable ? ' "null"' : "";
-        lines.push(`    ${mermaidType(column.dataType)} ${mermaidIdentifier(column.name)}${suffix}${comment}`);
+        lines.push(`    ${mermaidType(column.dataType)} ${mermaidIdentifier(column.name)}${suffix}`);
       }
       lines.push("  }");
     }
@@ -126,5 +144,7 @@ export function buildErDiagram(snapshot: SchemaSnapshot, options: ErOptions = {}
     included: includedTables.map((table) => table.name),
     skipped,
     truncatedColumns,
+    skippedRelations: skippedRelationsList.length,
+    droppedRelations: skippedRelationsList.slice(0, 50),
   };
 }

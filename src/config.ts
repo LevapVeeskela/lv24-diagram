@@ -12,6 +12,10 @@ export interface DatabaseConfig {
   password: string;
   ssl: boolean;
   schemas: string[];
+  /** Include views and materialized views in catalog listings (default false). */
+  includeViews: boolean;
+  /** Relations to hide from listings and ER (PostGIS internals by default). */
+  excludeTables: string[];
   statementTimeoutMs: number;
   maxRows: number;
 }
@@ -133,6 +137,14 @@ function asStringArray(value: unknown, path: string, fallback: string[]): string
   return value as string[];
 }
 
+function asStringArrayAllowEmpty(value: unknown, path: string, fallback: string[]): string[] {
+  if (value === undefined) return fallback;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new ConfigError(`${path} must be an array of strings`);
+  }
+  return value as string[];
+}
+
 function parseDatabase(raw: unknown): DatabaseConfig | undefined {
   if (raw === undefined || raw === null) return undefined;
   const value = asRecord(raw, "database");
@@ -153,6 +165,12 @@ function parseDatabase(raw: unknown): DatabaseConfig | undefined {
     password: asString(value.password, "database.password", ""),
     ssl: asBoolean(value.ssl, "database.ssl", false),
     schemas: asStringArray(value.schemas, "database.schemas", ["public"]),
+    includeViews: asBoolean(value.includeViews, "database.includeViews", false),
+    excludeTables: asStringArrayAllowEmpty(
+      value.excludeTables,
+      "database.excludeTables",
+      ["spatial_ref_sys"],
+    ),
     statementTimeoutMs: asNumber(value.statementTimeoutMs, "database.statementTimeoutMs", 15_000),
     maxRows: asNumber(value.maxRows, "database.maxRows", 500),
   };
@@ -261,6 +279,8 @@ export const CONFIG_TEMPLATE = {
     password: "${DB_PASSWORD}",
     ssl: false,
     schemas: ["public"],
+    includeViews: false,
+    excludeTables: ["spatial_ref_sys"],
     statementTimeoutMs: 15000,
     maxRows: 500,
   },

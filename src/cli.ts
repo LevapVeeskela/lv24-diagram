@@ -176,7 +176,7 @@ async function commandRender(args: CliArgs): Promise<number> {
       svg: rendered.svg,
       ...(rendered.png ? { png: rendered.png } : {}),
     });
-    console.log(JSON.stringify({ ...saved, width: rendered.width, height: rendered.height }, null, 2));
+    console.log(JSON.stringify({ ...saved, width: rendered.width, height: rendered.height, layoutWidth: rendered.layoutWidth, layoutHeight: rendered.layoutHeight }, null, 2));
     return 0;
   }
   const out = resolve(flagString(args, "out") ?? ".");
@@ -184,7 +184,7 @@ async function commandRender(args: CliArgs): Promise<number> {
   const base = file.replace(/\.mmd$/i, "");
   const svgPath = join(out, `${base}.svg`);
   await writeFile(svgPath, rendered.svg, "utf8");
-  const result: Record<string, unknown> = { svg: svgPath, width: rendered.width, height: rendered.height };
+  const result: Record<string, unknown> = { svg: svgPath, width: rendered.width, height: rendered.height, layoutWidth: rendered.layoutWidth, layoutHeight: rendered.layoutHeight };
   if (rendered.png) {
     const pngPath = join(out, `${base}.png`);
     await writeFile(pngPath, rendered.png);
