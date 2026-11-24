@@ -99,7 +99,7 @@ async function manifestHash(runtime: Runtime): Promise<{ hash: string; manifest:
   return { hash, manifest };
 }
 
-async function publishToBrain(runtime: Runtime): Promise<unknown> {
+async function publishToBrain(runtime: Runtime, dryRun = false): Promise<unknown> {
   if (!runtime.config.brain.enabled) return { published: false, reason: "brain.enabled is false" };
   const { hash, manifest } = await manifestHash(runtime);
   if (Object.keys(manifest.diagrams).length === 0) {
@@ -118,7 +118,11 @@ async function publishToBrain(runtime: Runtime): Promise<unknown> {
     "",
     "The .mmd files are the source of truth; PNG/SVG are generated.",
   ].join("\n");
-  const note = await runtime.brain.note(`Architecture diagrams: ${basename(runtime.docsDir)}`, redactSecrets(body));
+  const safeBody = redactSecrets(body);
+  if (dryRun) {
+    return { published: false, dryRun: true, hash, title: `Architecture diagrams: ${basename(runtime.docsDir)}`, body: safeBody };
+  }
+  const note = await runtime.brain.note(`Architecture diagrams: ${basename(runtime.docsDir)}`, safeBody);
   if (!note.ok) {
     return { published: false, reason: note.error ?? "brain write failed" };
   }
@@ -497,12 +501,14 @@ export function buildServer(runtime: Runtime): McpServer {
     {
       title: "Publish diagram digest to lv24-brain",
       description:
-        "Write one note describing the saved diagram set. Idempotent: skipped when the content hash was already published.",
-      inputSchema: {},
+        "Write one note describing the saved diagram set. Idempotent: skipped when the content hash was already published. Use dry_run to preview the note without writing.",
+      inputSchema: {
+        dry_run: z.boolean().optional(),
+      },
     },
-    async () => {
+    async ({ dry_run }) => {
       try {
-        return ok(await publishToBrain(runtime));
+        return ok(await publishToBrain(runtime, dry_run === true));
       } catch (error) {
         return fail(error);
       }

@@ -80,6 +80,12 @@ try {
       png: true,
     },
     diagram_lint: { mermaid: "flowchart LR\n A --> B\n B --> C" },
+    diagram_save: {
+      title: "Smoke context",
+      mermaid: "flowchart LR\n  U[User] -->|HTTPS| S[System]",
+      publish_to_brain: false,
+    },
+    brain_publish: { dry_run: true },
     schema_tables: { pattern: "%" },
     schema_er: { max_entities: 5 },
     arch_scan: { path: process.env.SMOKE_ARCH_PATH ?? cwd },
