@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.LevapVeeskela/lv24-diagram",
+  "title": "lv24-diagram",
+  "description": "Architecture-as-code MCP: Mermaid render/lint, ER diagrams from a live PostgreSQL schema, repository architecture scan, draw.io bridge and lv24-brain sync",
+  "repository": {
+    "url": "https://github.com/LevapVeeskela/lv24-diagram",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "lv24-diagram",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "runtimeArguments": [
+        {
+          "type": "positional",
+          "value": "-y"
+        }
+      ],
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

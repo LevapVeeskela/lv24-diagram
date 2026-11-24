@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/LevapVeeskela/lv24-diagram/main/diagram.config.schema.json",
+  "title": "lv24-diagram configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "docs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dir": { "type": "string", "default": "docs/architecture", "description": "Directory for .mmd/.svg/.png and the README index." },
+        "theme": { "type": "string", "enum": ["default", "base", "dark", "forest", "neutral"], "default": "default" },
+        "backgroundColor": { "type": "string", "default": "#ffffff" }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["database", "user"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["postgres"], "default": "postgres" },
+        "host": { "type": "string", "default": "127.0.0.1" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 5432 },
+        "database": { "type": "string" },
+        "user": { "type": "string" },
+        "password": { "type": "string", "description": "Use \"${ENV_VAR}\"; never a literal secret." },
+        "ssl": { "type": "boolean", "default": false },
+        "schemas": { "type": "array", "items": { "type": "string" }, "minItems": 1, "default": ["public"] },
+        "statementTimeoutMs": { "type": "integer", "minimum": 1, "default": 15000 },
+        "maxRows": { "type": "integer", "minimum": 1, "default": 500 }
+      }
+    },
+    "drawio": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "default": "http://127.0.0.1:3214/mcp" },
+        "editorUrl": { "type": "string", "default": "http://127.0.0.1:3214/" }
+      }
+    },
+    "arch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxFiles": { "type": "integer", "minimum": 50, "default": 4000 }
+      }
+    },
+    "brain": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "project": { "type": "string", "description": "lv24-brain project id; resolved from cwd when omitted." },
+        "binary": { "type": "string", "description": "Path to the brain binary; defaults to $LV24_DIAGRAM_BRAIN_BIN or `brain`." }
+      }
+    }
+  }
+}
