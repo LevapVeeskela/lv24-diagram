@@ -83,11 +83,7 @@ hard error.
     "servers": {
       "lv24-diagram": {
         "type": "local",
-        "command": [
-          "C:/nvm4w/nodejs/node.exe",
-          "C:/nvm4w/nodejs/node_modules/lv24-diagram/dist/src/cli.js",
-          "mcp"
-        ]
+        "command": ["node", "<npm-prefix>/node_modules/lv24-diagram/dist/src/cli.js", "mcp"]
       }
     }
   }
