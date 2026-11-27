@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "diagrams": {
+    "agent-and-engines": {
+      "index": "01",
+      "title": "Agent and engines",
+      "slug": "agent-and-engines",
+      "hash": "612f44f1e7946e34",
+      "updatedAt": "2026-11-27",
+      "png": true,
+      "svg": true
+    },
+    "source-layer-dag": {
+      "index": "02",
+      "title": "Source layer DAG",
+      "slug": "source-layer-dag",
+      "hash": "16d058406e2eaf37",
+      "updatedAt": "2026-11-27",
+      "png": true,
+      "svg": true
+    },
+    "http-render-path": {
+      "index": "03",
+      "title": "HTTP render path",
+      "slug": "http-render-path",
+      "hash": "e3ad88216332888a",
+      "updatedAt": "2026-11-27",
+      "png": true,
+      "svg": true
+    }
+  }
+}

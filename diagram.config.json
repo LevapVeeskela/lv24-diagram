@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LevapVeeskela/lv24-diagram/main/diagram.config.schema.json",
+  "docs": {
+    "dir": "docs/architecture",
+    "theme": "default",
+    "backgroundColor": "#ffffff"
+  },
+  "brain": {
+    "enabled": false
+  }
+}

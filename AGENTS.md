@@ -1,5 +1,22 @@
 # AGENTS.md — lv24-diagram
 
+## Start here
+
+1. [`README.md`](README.md) — pitch, install, config, tool table, HTTP mode, limits.
+2. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — components, layer DAG, flows, guardrails.
+3. [`docs/README.md`](docs/README.md) — documentation map by audience.
+4. [`docs/design.md`](docs/design.md) — rationale; [`src/cli.ts`](src/cli.ts) and
+   [`src/mcp/server.ts`](src/mcp/server.ts) — entry and tool surface.
+
+Commands (verified in `package.json` and CLI help): `npm install` · `npm run build` · `npm test` ·
+`node dist/src/cli.js doctor` · `lv24-diagram init` ·
+`lv24-diagram serve --http-port 3793` (requires a non-empty `DIAGRAM_API_TOKEN`).
+
+Invariants: **stdout is protocol-only** (logs go to stderr); the read-only DB guard is a guardrail,
+**not a permission boundary** (use a `SELECT`-only role); failures are explicit — unknowns, 429/503,
+and missing Chromium/Redis are reported, never papered over. Brain sync is **disabled**: this
+repository is not registered as an `lv24-brain` project.
+
 Rules for agents working in this repository.
 
 ## Shape

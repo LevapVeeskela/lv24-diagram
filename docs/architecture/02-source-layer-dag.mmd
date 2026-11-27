@@ -1,0 +1,13 @@
+flowchart TB
+  CLI["cli.ts entry"] -->|"starts"| MCP["src/mcp"]
+  CLI -->|"starts"| HTTP["src/http"]
+  CLI -->|"loads"| CFG["src/config and src/log"]
+  MCP -->|"calls"| MER["src/mermaid"]
+  MCP -->|"calls"| SCH["src/schema"]
+  MCP -->|"calls"| ARC["src/arch"]
+  MCP -->|"calls"| DRW["src/drawio"]
+  MCP -->|"calls"| DOC["src/docs"]
+  MCP -->|"calls"| BRN["src/brain"]
+  MCP -->|"uses"| CFG
+  HTTP -->|"calls"| MER
+  HTTP -->|"stores"| STO["src/http/storage"]

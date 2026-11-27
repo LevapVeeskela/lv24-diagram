@@ -1,0 +1,8 @@
+flowchart LR
+  C["Client"] -->|"POST + token"| A["HTTP API :3793"]
+  A -->|"401, 400, 413"| E["JSON error"]
+  A -->|"valid request"| W["Render worker"]
+  W -->|"429 queue full"| E
+  W -->|"503 timeout or storage down"| E
+  W -->|"stores PNG, TTL 1 h"| S["Redis store"]
+  W -->|"returns UUID"| U["Public PNG URL"]

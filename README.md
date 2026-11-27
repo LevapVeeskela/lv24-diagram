@@ -5,6 +5,7 @@ diagrams from a **live** PostgreSQL schema, scan a repository into an architectu
 shared draw.io editor, and keep [lv24-brain](https://github.com/LevapVeeskela/lv24-brain) in sync.
 
 One server instead of three (mermaid + dbhub + drawio), with the workflow glue those tools lack.
+**Docs:** [Architecture](docs/ARCHITECTURE.md) · [Docs map](docs/README.md) · [Agent entry](AGENTS.md).
 
 ```text
 agent ──stdio──> lv24-diagram ──┬── mermaid-isomorphic + chromium   (SVG/PNG)
@@ -14,17 +15,22 @@ agent ──stdio──> lv24-diagram ──┬── mermaid-isomorphic + chrom
                                 └── brain CLI                        (context in, digest out)
 ```
 
+## Status
+
+| Item | Value |
+|---|---|
+| Version | **0.2.1** (2026-11-25) — owned by `package.json`, `src/version.ts`, `server.json` |
+| License / package | Apache-2.0 · public npm `lv24-diagram` · MCP Registry `io.github.LevapVeeskela/lv24-diagram` |
+| Runtime | Node ≥ 22.5, ESM, strict TypeScript; Chromium for rendering |
+| Ship state | 0.2.1 published; HTTP mode since 0.2.0; no functional change in 0.2.1 |
+| Verification | `npm test` — 49 `node:test` cases (see [CHANGELOG](CHANGELOG.md)) |
+
 ## Why another MCP
 
-- **Checks before pretty pictures.** `diagram_lint` enforces readability budgets (nodes, depth,
-  cycles, edge labels, label length) so overview diagrams stay readable.
-- **ER from the database, not from memory.** Column names are the classic silent error; the schema
-  tools read `pg_class` / `information_schema` / `pg_constraint` and never guess.
-- **Architecture from the repository.** `arch_scan` reads compose services, nginx `proxy_pass`
-  targets (including `set $var` and `upstream` blocks) and packages, and reports what it could not
-  resolve instead of inventing it.
-- **Brain in the loop.** `brain_context` seeds a diagram with the project's actual goal; `brain_publish`
-  writes one idempotent note (content hash) pointing at `docs/architecture/`.
+- **Checks before pretty pictures.** `diagram_lint` enforces node, depth, cycle, and label budgets.
+- **ER from the catalog, not memory.** `pg_class`, `information_schema`, and `pg_constraint`; no guesses.
+- **Architecture from files.** Compose, nginx `proxy_pass`/`set`/`upstream`, packages; unknowns reported.
+- **Brain in the loop.** Project context in; one idempotent digest out.
 
 ## Install
 
@@ -34,16 +40,9 @@ npm i -g lv24-diagram
 lv24-diagram version
 ```
 
-Windows: install under the Node you actually use (`npm prefix -g` tells you where). The package
-spawns the binary by absolute path from the OpenCode config, not through `npx`.
-
-Mermaid rendering needs Chromium. If it is missing:
-
-```bash
-npm i -g lv24-diagram --allow-scripts=lv24-diagram
-# or, from the package directory:
-npx playwright install chromium
-```
+Windows: install under the Node you actually use (`npm prefix -g` tells you where). Rendering needs
+Chromium; if it is missing, run `npm i -g lv24-diagram --allow-scripts=lv24-diagram` or
+`npx playwright install chromium` from the package directory.
 
 ## Configure
 
@@ -53,20 +52,14 @@ cd <repo> && lv24-diagram init      # writes diagram.config.json
 
 ```jsonc
 {
-  "docs": { "dir": "docs/architecture", "theme": "default", "backgroundColor": "#ffffff" },
+  "docs": { "dir": "docs/architecture", "theme": "default" },
   "database": {
-    "kind": "postgres",
-    "host": "127.0.0.1",
-    "port": 5432,
-    "database": "app",
-    "user": "readonly_user",
-    "password": "${APP_DB_PASSWORD}",   // env substitution
-    "passwordFile": "C:/Users/me/.config/lv24-diagram/db-password", // optional, wins over password
-    "schemas": ["public"],
-    "includeViews": false,
-    "excludeTables": ["spatial_ref_sys"],
-    "statementTimeoutMs": 15000,
-    "maxRows": 500
+    "kind": "postgres", "host": "127.0.0.1", "port": 5432,
+    "database": "app", "user": "readonly_user",
+    "password": "${APP_DB_PASSWORD}",             // env substitution
+    "passwordFile": "C:/Users/me/.config/lv24-diagram/db-password", // wins over password
+    "schemas": ["public"], "excludeTables": ["spatial_ref_sys"],
+    "includeViews": false, "statementTimeoutMs": 15000, "maxRows": 500
   },
   "drawio": { "url": "http://127.0.0.1:3214/mcp", "editorUrl": "http://127.0.0.1:3214/" },
   "arch": { "maxFiles": 4000 },
@@ -76,28 +69,25 @@ cd <repo> && lv24-diagram init      # writes diagram.config.json
 
 Discovery order: `--config`, `$DIAGRAM_CONFIG`, `./diagram.config.json`,
 `~/.config/lv24-diagram/config.json`. `${VAR}` is expanded at load time; a missing variable is a
-hard error.
+hard error. The full key list is in [diagram.config.schema.json](diagram.config.schema.json).
 
-Secrets: `password` accepts `${ENV_VAR}`, but an already-running MCP host cannot be given a new
-environment variable. Use `passwordFile` instead — a path to a file readable only by you. A relative
-path resolves against the config file's directory; the file is read and trimmed at load time, and it
-wins over `password`. A missing or empty file is a hard error that names the path and never echoes
-the file contents. Keep the file outside repositories and set the OS ACL to your user only.
+Secrets: use `passwordFile` when the MCP host is already running and cannot receive a new environment
+variable. A relative path resolves against the config directory; the file is trimmed at load and wins
+over `password`. A missing or empty file is a hard error that names the path and never echoes the
+contents. Keep it outside repositories with an owner-only ACL.
 
 ## OpenCode
 
 ```jsonc
 {
-  "mcp": {
-    "servers": {
-      "lv24-diagram": {
-        "type": "local",
-        "command": ["node", "<npm-prefix>/node_modules/lv24-diagram/dist/src/cli.js", "mcp"]
-      }
-    }
-  }
+  "mcp": { "servers": { "lv24-diagram": {
+    "type": "local",
+    "command": ["node", "<npm-prefix>/node_modules/lv24-diagram/dist/src/cli.js", "mcp"]
+  } } }
 }
 ```
+
+Use the absolute script path; do not route the server through `npx`.
 
 ## Tools
 
@@ -127,11 +117,7 @@ by a public UUID URL (used by the city AI diagram desk). The stdio MCP command i
 
 ```bash
 export DIAGRAM_API_TOKEN="..."      # required, must not be empty
-lv24-diagram serve \
-  --http-port 3793 \
-  --host 127.0.0.1 \
-  --redis-url redis://127.0.0.1:6379 \
-  --token-env DIAGRAM_API_TOKEN
+lv24-diagram serve --http-port 3793 --redis-url redis://127.0.0.1:6379
 ```
 
 | Endpoint | Auth | Behaviour |
@@ -139,68 +125,56 @@ lv24-diagram serve \
 | `GET /health` | no | `{status, chromium, storage, queue}` |
 | `POST /v1/render` | `x-lv24-diagram-token` | Mermaid → PNG, stored for one hour |
 | `GET /v1/diagrams/{uuid}.png` | no | `image/png`, `Cache-Control: public, max-age=3600, immutable` |
-| `GET /docs-json` | no | OpenAPI 3 JSON |
-| `GET /docs` | no | Swagger UI |
+| `GET /docs-json` · `GET /docs` | no | OpenAPI 3 JSON · Swagger UI |
 
 ```bash
-curl -s -X POST http://127.0.0.1:3793/v1/render \
-  -H "x-lv24-diagram-token: $DIAGRAM_API_TOKEN" \
-  -H 'content-type: application/json' \
-  -d '{"mermaid":"flowchart LR\n  A[User] --> B[API]","theme":"default","title":"Request flow"}'
-# {"id":"…","width":522,"height":84,"bytes":5725,"mermaid":"…"}
+curl -s http://127.0.0.1:3793/health
 ```
 
 Request body: `mermaid` 10–4000 characters, `theme` `default|base|dark|forest|neutral`, optional
-`title` 1–80. Rendering is capped at **40 nodes** (lint hard budget) and uses Mermaid
-`securityLevel: strict`; `click` directives and `%%{init}%%` blocks are rejected with
-400 `DIAGRAM_INVALID` plus `findings[]`. Concurrency is **1**, the waiting queue is **4**, the
-render timeout is **10 s**, and the PNG long side is capped at **2400 px** (downscaled after render).
-A full queue returns 429 `DIAGRAM_BUSY`; a render failure, timeout or missing Chromium returns
+`title` 1–80. Rendering is capped at **40 nodes** and uses Mermaid `securityLevel: strict`; `click`
+and `%%{init}%%` are rejected with 400 `DIAGRAM_INVALID` plus `findings[]`. Concurrency is **1**, the
+waiting queue is **4**, the render timeout is **10 s**, and the PNG long side is capped at **2400 px**.
+A full queue returns 429 `DIAGRAM_BUSY`; a render failure, timeout, or missing Chromium returns
 503 `DIAGRAM_UNAVAILABLE`.
 
-PNGs live in Redis under `diagram:v1:png:<uuid>` with TTL **3600 s**. There is deliberately no
-in-memory fallback: when Redis is unavailable, `POST /v1/render` and `GET …png` return
-503 `STORAGE_UNAVAILABLE`, and `/health` reports `storage: "down"`. The token comes from the
-environment variable named by `--token-env`; missing or empty stops the process before it listens.
+PNGs live in Redis under `diagram:v1:png:<uuid>` with TTL **3600 s**; there is no in-memory fallback.
+When Redis is unavailable, render and fetch return 503 `STORAGE_UNAVAILABLE`, and `/health` reports
+`storage: "down"`. A missing or empty token stops the process before it listens.
 
-The default bind is `127.0.0.1`. In a container, bind the container interface and publish the port
-only on the internal Docker network — never on the host's public interface. Logs go to stderr and
-contain neither the token nor diagram text.
+The default bind is `127.0.0.1`. In a container, bind the container interface and publish only on an
+internal Docker network — never on the host's public interface. Logs go to stderr and contain neither
+the token nor diagram text.
 
 ## draw.io
 
 The editor is one shared HTTP server per machine (port **3214**, WebSocket **3337**), because two
-instances fight over the extension port. It can run headless and serve the editor:
+instances fight over the extension port.
 
 ```bash
-lv24-diagram drawio start        # node drawio-mcp-server --editor --transport http --http-port 3214 --extension-port 3337 --host 127.0.0.1
+lv24-diagram drawio start        # headless editor on 127.0.0.1:3214
 ```
 
-Open `http://127.0.0.1:3214/` once — the page connects a document, and the draw.io tools work.
-Without an open editor they return `No connected Draw.io documents`; that is expected, not a fault.
-Keep the tab visible: Chrome moves background tabs to bfcache and drops the WebSocket.
+Open `http://127.0.0.1:3214/` once to connect a document; without it the tools return
+`No connected Draw.io documents` (expected, not a fault). Keep the tab visible — Chrome moves
+background tabs to bfcache and drops the WebSocket.
 
 ## Brain sync
 
-- `brain_context` runs `brain open . --json` and returns `goal`, `next_action`, `active`.
-- `diagram_save` / `schema_er` / `arch_diagram` call `brain_publish` unless
-  `publish_to_brain: false`.
-- Publishing is skipped when the manifest content hash was already published; the note id and hash
-  live in `docs/architecture/.diagrams.json`.
-- Notes contain names, counts and paths only. `redactSecrets` strips `user:pass@` and
-  `password=`/`token=` patterns before anything is written.
-- If the brain CLI is missing or the project is unregistered, the diagram is still saved; the tool
-  reports the sync failure instead of failing the work.
+`brain_context` runs `brain open . --json` and returns `goal`, `next_action`, `active`.
+`diagram_save`, `schema_er`, and `arch_diagram` publish one digest unless `publish_to_brain: false`;
+publishing is skipped when the manifest content hash was already published (note id and hash live in
+`docs/architecture/.diagrams.json`). Notes contain names, counts, and paths only; `redactSecrets`
+strips `user:pass@` and `password=`/`token=` patterns. If the brain CLI is missing or the project is
+unregistered, the diagram is still saved and the sync failure is reported.
 
 ## Security
 
-- Everything is local: stdio transport, draw.io bound to `127.0.0.1`.
-- Database access is read-only by construction: the session is set to read-only, the user should be
-  `db_datareader`/`SELECT`-only, and the SQL guard is explicitly a **guardrail, not a permission
-  boundary**.
-- No secrets in configs, notes or diagrams: `${ENV}` substitution or a `passwordFile` that lives
-  outside the repository with restrictive ACLs. Errors reveal paths, never contents.
-- `arch_scan` skips hidden directories and never reads `.env*` contents — only presence of files.
+- Everything is local: stdio transport; draw.io bound to `127.0.0.1`.
+- Database access is read-only by construction: read-only session, `db_datareader`/`SELECT`-only
+  role, and a SQL guard that is explicitly a **guardrail, not a permission boundary**.
+- No secrets in configs, notes, or diagrams (`${ENV}` or `passwordFile`; errors reveal paths only);
+  `arch_scan` never reads `.env*` contents.
 
 ## Development
 
@@ -211,7 +185,15 @@ npm test               # node:test, 49 tests
 node dist/src/cli.js doctor
 ```
 
-See [AGENTS.md](AGENTS.md) for repository rules and [docs/design.md](docs/design.md) for decisions.
+## Documentation
+
+| Doc | What it covers |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System context, components, layer DAG, flows, storage, deployment, guardrails |
+| [docs/README.md](docs/README.md) | Documentation map by audience |
+| [docs/design.md](docs/design.md) | Rationale for the one-server design and its trade-offs |
+| [docs/architecture/README.md](docs/architecture/README.md) | Generated index of numbered diagrams; `.mmd` is the source, `.svg`/`.png` are generated |
+| [AGENTS.md](AGENTS.md) · [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) | Agent rules · released surface and limits · vulnerability reporting |
 
 ## License
 

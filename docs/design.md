@@ -1,5 +1,8 @@
 # Design decisions
 
+> Current system design: [ARCHITECTURE.md](ARCHITECTURE.md). This file records the decisions behind
+> v0.1.0 and remains the rationale; it is not a component reference.
+
 Short record of the choices behind v0.1.0. Update this file when a decision changes.
 
 ## One server, three engines

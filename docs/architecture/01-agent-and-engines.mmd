@@ -1,0 +1,15 @@
+flowchart LR
+  AG["Agent or human"] -->|"MCP over stdio"| MCP["MCP server"]
+  AG -->|"HTTP POST render"| HTTP["HTTP serve :3793"]
+  MCP -->|"render and lint"| MER["Mermaid engine"]
+  MCP -->|"catalog queries"| PG["Postgres catalog"]
+  MCP -->|"compose, nginx, packages"| ARCH["Architecture scan"]
+  MCP -->|"MCP client"| DRAW["draw.io bridge :3214"]
+  MCP -->|"brain CLI"| BRAIN["Project context"]
+  MCP -->|"save and index"| DOCS["Docs repository"]
+  HTTP -->|"render"| MER
+  HTTP -->|"store PNG"| RDS["Redis TTL 1h"]
+  MER -->|"SVG and PNG"| OUT["Diagram files"]
+  PG -->|"tables and FKs"| ER["ER diagram"]
+  ARCH -->|"services and unknowns"| VIEW["Context and container views"]
+  DOCS -->|"NN-slug files"| FILES["docs/architecture"]
